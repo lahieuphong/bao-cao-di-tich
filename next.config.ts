@@ -1,7 +1,17 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
+
+const isProd = process.env.NODE_ENV === 'production'
+const repoName = 'bao-cao-di-tich'
+const repoBasePath = isProd ? `/${repoName}` : ''
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
+  basePath: repoBasePath,
+  assetPrefix: repoBasePath,
+}
 
-export default nextConfig;
+export default nextConfig
