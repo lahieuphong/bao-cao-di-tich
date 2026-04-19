@@ -11,7 +11,7 @@ function withBasePath(src: string): string {
   return `${basePath}${src}`
 }
 
-export default function BrandMark() {
+export default function ThuongHieu() {
   return (
     <div className="flex items-center gap-3">
       <div className="relative h-10 w-10 shrink-0 overflow-hidden">

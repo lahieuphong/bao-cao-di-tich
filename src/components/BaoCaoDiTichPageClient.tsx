@@ -7,9 +7,10 @@ import { useEffect, useMemo, useState } from 'react'
 import ThanhDauTrang from '@/src/components/layout/ThanhDauTrang'
 import SidebarNav from '@/src/components/layout/ThanhDieuHuong'
 import DanhSachSection from '@/src/components/list/DanhSachDiTichSection'
-import { CMS_UPLOAD_URL } from '@/src/constants/site'
+import TrangThaiDiTichSection from '@/src/components/list/TrangThaiDiTichSection'
 import type { HeritageItem, HeritageRank } from '@/src/types/diTich'
 import type { DanhSachItem } from '@/src/data/danhSachDiTich'
+import type { DangNhapItem } from '@/src/data/dangNhap'
 
 const heritageSections: Array<{ title: string; rank: HeritageRank }> = [
   { title: 'Di tích quốc gia đặc biệt', rank: 'Di tích quốc gia đặc biệt' },
@@ -106,9 +107,11 @@ function SectionTitleIcon({
 }: {
   variant: 'all' | 'special' | 'national' | 'city'
 }) {
+  const iconClassName = 'h-[0.9em] w-[0.9em] align-middle'
+
   if (variant === 'all') {
     return (
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" viewBox="0 0 24 24" className={iconClassName} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="m12 3 1.8 3.7L18 8.5l-3 2.9.7 4.1L12 13.6 8.3 15.5 9 11.4 6 8.5l4.2-1.8L12 3Z" />
         <path d="M5 18h14" />
       </svg>
@@ -117,7 +120,7 @@ function SectionTitleIcon({
 
   if (variant === 'special') {
     return (
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" viewBox="0 0 24 24" className={iconClassName} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="8" r="4" />
         <path d="m9.5 11.5-1.5 8 4-2 4 2-1.5-8" />
       </svg>
@@ -126,7 +129,7 @@ function SectionTitleIcon({
 
   if (variant === 'national') {
     return (
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" viewBox="0 0 24 24" className={iconClassName} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 21h18" />
         <path d="M4 7h16" />
         <path d="M6 7v14" />
@@ -139,7 +142,7 @@ function SectionTitleIcon({
   }
 
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" className={iconClassName} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 21V9l4-3 5 3 5-4 4 3v13" />
       <path d="M8 21v-5h3v5" />
       <path d="M14 21v-4h3v4" />
@@ -150,6 +153,7 @@ function SectionTitleIcon({
 interface HeritagesPageClientProps {
   heritages: HeritageItem[]
   danhSachItems: DanhSachItem[]
+  dangNhapItems: DangNhapItem[]
 }
 
 function getHeritageUrl(slug: string): string {
@@ -214,14 +218,18 @@ function buildMissingIdRanges(missingIds: number[], total: number): string {
 export default function HeritagesPageClient({
   heritages,
   danhSachItems,
+  dangNhapItems,
 }: HeritagesPageClientProps) {
-  const heroImage = '/images/hero/di-tich-hero.jpg'
+  const heroImage = '/images/anh-bia/di-tich-anh-bia.jpg'
   const latest = heritages[0]
   const publishCount = heritages.length
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [scopeMode, setScopeMode] = useState<ScopeMode>('all')
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [activePage, setActivePage] = useState<'hoc' | 'danh-sach'>('hoc')
+  const [activePage, setActivePage] = useState<'tong-hop' | 'danh-sach' | 'trang-thai'>('tong-hop')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; avatar: string } | null>(null)
+  const [statusByHeritageId, setStatusByHeritageId] = useState<Record<string, boolean>>({})
   const [showMissingModal, setShowMissingModal] = useState(false)
   const [gridColumns, setGridColumns] = useState(4)
   const [expandedGridSections, setExpandedGridSections] = useState<Record<string, boolean>>({})
@@ -276,6 +284,28 @@ export default function HeritagesPageClient({
     items: heritages.filter((item) => item.rank === section.rank),
   }))
 
+  const handleLoginSuccess = (user: { id: string; username: string; avatar: string }) => {
+    setIsLoggedIn(true)
+    setCurrentUser(user)
+    setStatusByHeritageId({})
+  }
+
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    setCurrentUser(null)
+  }
+
+  const handleToggleStatus = (id: string) => {
+    setStatusByHeritageId((prev) => ({
+      ...prev,
+      [id]: !(prev[id] ?? true),
+    }))
+  }
+
+  const isVisibleInOverview = (id: string) => {
+    return statusByHeritageId[id] !== false
+  }
+
   const handleScopeModeChange = (mode: ScopeMode) => {
     const currentY = window.scrollY
     setScopeMode(mode)
@@ -302,9 +332,13 @@ export default function HeritagesPageClient({
               setActivePage('danh-sach')
               return
             }
+            if (key === 'trang-thai') {
+              setActivePage('trang-thai')
+              return
+            }
 
-            if (key === 'hoc' || key === 'trang-chu') {
-              setActivePage('hoc')
+            if (key === 'tong-hop' || key === 'trang-chu') {
+              setActivePage('tong-hop')
             }
           }}
         />
@@ -314,11 +348,15 @@ export default function HeritagesPageClient({
             sidebarOpen={sidebarOpen}
             activePage={activePage}
             onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-            loginUrl={CMS_UPLOAD_URL}
+            dangNhapItems={dangNhapItems}
+            isLoggedIn={isLoggedIn}
+            currentUser={currentUser}
+            onLoginSuccess={handleLoginSuccess}
+            onLogout={handleLogout}
           />
 
           <section className={isDanhSachPage ? 'pb-7 lg:flex-1 lg:min-h-0 lg:overflow-hidden lg:pb-0' : 'pb-7'}>
-            {activePage === 'hoc' ? (
+            {activePage === 'tong-hop' ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -347,14 +385,6 @@ export default function HeritagesPageClient({
                     </p>
 
                     <div className="mt-7 flex flex-wrap gap-3">
-                      <Link
-                        href={CMS_UPLOAD_URL}
-                        target="_blank"
-                        className="inline-flex h-14 items-center rounded-xl bg-[#3a66ff] px-7 text-lg font-semibold text-white transition hover:bg-[#3058e6]"
-                      >
-                        Tìm Kiếm Tài Liệu (⌘ + K)
-                      </Link>
-
                       {latest ? (
                         <Link
                           href={getHeritageUrl(latest.slug)}
@@ -369,7 +399,7 @@ export default function HeritagesPageClient({
               </motion.div>
             ) : null}
 
-            {activePage === 'hoc' ? (
+            {activePage === 'tong-hop' ? (
               <section className="mt-0 space-y-10 px-5 md:px-8">
               <div className="-mx-5 flex flex-wrap items-center justify-between gap-4 rounded-none border-y border-[#6f8fff]/35 bg-[#2563eb]/16 px-5 py-2 shadow-[0_0_0_1px_rgba(83,124,255,0.16),0_0_20px_rgba(37,99,235,0.22)] md:-mx-8 md:px-8">
                 <div className="inline-flex h-10 items-center rounded-lg border border-[#6f8fff]/35 bg-[#0f1729] p-0.5 shadow-[0_0_0_1px_rgba(83,124,255,0.14),0_0_18px_rgba(59,130,246,0.25),0_10px_30px_rgba(10,24,58,0.35)]">
@@ -427,14 +457,14 @@ export default function HeritagesPageClient({
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-xl border border-white/10 bg-[#0e1422] px-4 py-2.5">
-                  <p className="text-[13px] font-semibold tracking-normal text-white/55">Tổng đã push</p>
+                  <p className="text-[15px] font-bold tracking-normal text-white/65">Tổng đã push</p>
                   <p className="mt-1.5 text-[36px] font-semibold leading-none text-white" style={{ fontSize: 36 / 2 }}>
                     {publishCount}
                   </p>
                 </div>
                 {groupedSections.map((section) => (
                   <div key={`stat-${section.title}`} className="rounded-xl border border-white/10 bg-[#0e1422] px-4 py-2.5">
-                    <p className="text-[13px] font-semibold tracking-normal text-white/55">{section.title}</p>
+                    <p className="text-[15px] font-bold tracking-normal text-white/65">{section.title}</p>
                     <p className="mt-1.5 text-[36px] font-semibold leading-none text-white" style={{ fontSize: 36 / 2 }}>
                       {section.items.length}
                     </p>
@@ -447,8 +477,8 @@ export default function HeritagesPageClient({
                 : groupedSections
               ).map((sectionTitle, sectionIdx) => (
                 <div key={sectionTitle.title}>
-                  <h2 className="flex items-center gap-2.5 text-[64px] font-semibold tracking-[-0.03em]" style={{ fontSize: 64 / 2 }}>
-                    <span className="shrink-0 text-white/78">
+                  <h2 className="flex items-center gap-2.5 text-[64px] font-semibold leading-[1.05] tracking-[-0.03em]" style={{ fontSize: 64 / 2 }}>
+                    <span className="inline-flex shrink-0 items-center justify-center text-white/78">
                       <SectionTitleIcon
                         variant={
                           sectionTitle.rank === null
@@ -555,7 +585,7 @@ export default function HeritagesPageClient({
                   ) : (
                     <div className="mt-5 overflow-hidden rounded-xl border border-white/10 bg-[#0e1422]">
                       <div
-                        className={`grid gap-4 border-b border-white/10 px-5 py-3 text-xs font-semibold tracking-normal text-white/55 ${
+                        className={`grid gap-4 border-b border-white/10 px-5 py-3 text-sm font-bold tracking-normal text-white/70 ${
                           scopeMode === 'all'
                             ? 'grid-cols-[0.7fr_1.7fr_1.3fr_1.3fr_1.2fr_2.2fr_auto]'
                             : 'grid-cols-[0.7fr_2fr_1.3fr_1.2fr_2.6fr_auto]'
@@ -570,33 +600,35 @@ export default function HeritagesPageClient({
                         <p className="text-right">Link</p>
                       </div>
 
-                      {sectionTitle.items.map((item) => (
-                        <div
-                          key={`${sectionTitle.title}-list-${item.id}`}
-                          className={`grid gap-4 border-b border-white/10 px-5 py-4 text-sm text-white/85 last:border-b-0 ${
-                            scopeMode === 'all'
-                              ? 'grid-cols-[0.7fr_1.7fr_1.3fr_1.3fr_1.2fr_2.2fr_auto]'
-                              : 'grid-cols-[0.7fr_2fr_1.3fr_1.2fr_2.6fr_auto]'
-                          }`}
-                        >
-                          <p className="font-semibold text-white">{item.id}</p>
-                          <p className="font-semibold text-white">{item.name}</p>
-                          <p>{item.address}</p>
-                          {scopeMode === 'all' ? <p>{item.rank}</p> : null}
-                          <p>{item.updatedAt}</p>
-                          <p className="text-white/65">{item.note}</p>
-                          <div className="text-right">
-                            <Link
-                              href={getHeritageUrl(item.slug)}
-                              className="inline-flex rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10"
-                            >
-                              Xem
-                            </Link>
+                      {sectionTitle.items
+                        .filter((item) => isVisibleInOverview(String(item.id)))
+                        .map((item) => (
+                          <div
+                            key={`${sectionTitle.title}-list-${item.id}`}
+                            className={`grid gap-4 border-b border-white/10 px-5 py-4 text-sm text-white/85 last:border-b-0 ${
+                              scopeMode === 'all'
+                                ? 'grid-cols-[0.7fr_1.7fr_1.3fr_1.3fr_1.2fr_2.2fr_auto]'
+                                : 'grid-cols-[0.7fr_2fr_1.3fr_1.2fr_2.6fr_auto]'
+                            }`}
+                          >
+                            <p className="font-semibold text-white">{item.id}</p>
+                            <p className="font-semibold text-white">{item.name}</p>
+                            <p>{item.address}</p>
+                            {scopeMode === 'all' ? <p>{item.rank}</p> : null}
+                            <p>{item.updatedAt}</p>
+                            <p className="text-white/65">{item.note}</p>
+                            <div className="text-right">
+                              <Link
+                                href={getHeritageUrl(item.slug)}
+                                className="inline-flex rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10"
+                              >
+                                Xem
+                              </Link>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
 
-                      {sectionTitle.items.length === 0 ? (
+                      {sectionTitle.items.filter((item) => isVisibleInOverview(String(item.id))).length === 0 ? (
                         <div className="px-5 py-8 text-center text-white/60">
                           Chưa có dữ liệu cho nhóm này.
                         </div>
@@ -606,12 +638,17 @@ export default function HeritagesPageClient({
                 </div>
               ))}
 
-              <div className="mt-6 rounded-xl border border-white/10 bg-[#0e1422] px-5 py-4 text-sm text-white/75">
-                Đã push lên web: <span className="font-semibold text-white">{publishCount}</span>
-              </div>
               </section>
             ) : (
-              <DanhSachSection items={danhSachItems} />
+              activePage === 'danh-sach' ? (
+                <DanhSachSection items={danhSachItems} />
+              ) : (
+                <TrangThaiDiTichSection
+                  items={heritages}
+                  statusByHeritageId={statusByHeritageId}
+                  onToggleStatus={handleToggleStatus}
+                />
+              )
             )}
           </section>
         </div>

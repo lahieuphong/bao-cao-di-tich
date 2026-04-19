@@ -1,4 +1,4 @@
-import BrandMark from '@/src/components/branding/BrandMark'
+import ThuongHieu from '@/src/components/branding/ThuongHieu'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -74,7 +74,27 @@ function ListIcon() {
   )
 }
 
-function CompactBrandMark() {
+function StatusIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="6" width="18" height="4" rx="2" />
+      <rect x="3" y="14" width="18" height="4" rx="2" />
+      <circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="16" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function ThuongHieuRutGon() {
   return (
     <div className="relative h-10 w-10 shrink-0 overflow-hidden">
       <Image
@@ -90,14 +110,15 @@ function CompactBrandMark() {
 
 const sidebarItems = [
   { key: 'trang-chu', label: 'Trang Chủ', icon: HomeIcon },
-  { key: 'hoc', label: 'Tổng hợp', icon: OverviewIcon },
+  { key: 'tong-hop', label: 'Tổng hợp', icon: OverviewIcon },
   { key: 'danh-sach', label: 'Danh sách', icon: ListIcon },
+  { key: 'trang-thai', label: 'Trạng thái', icon: StatusIcon },
 ]
 
 interface SidebarNavProps {
   isOpen: boolean
-  activeItem: 'hoc' | 'danh-sach'
-  onSelectItem: (key: 'trang-chu' | 'hoc' | 'danh-sach') => void
+  activeItem: 'tong-hop' | 'danh-sach' | 'trang-thai'
+  onSelectItem: (key: 'trang-chu' | 'tong-hop' | 'danh-sach' | 'trang-thai') => void
 }
 
 export default function SidebarNav({
@@ -116,7 +137,7 @@ export default function SidebarNav({
           isOpen ? 'px-5 justify-start' : 'px-2 justify-center'
         }`}
       >
-        {isOpen ? <BrandMark /> : <CompactBrandMark />}
+        {isOpen ? <ThuongHieu /> : <ThuongHieuRutGon />}
       </div>
 
       <div className={`flex min-h-0 flex-1 flex-col ${isOpen ? 'px-5 py-4' : 'px-2 py-4'}`}>
@@ -125,14 +146,15 @@ export default function SidebarNav({
           {sidebarItems.map((item) => {
             const Icon = item.icon
             const isActive =
-              (item.key === 'hoc' && activeItem === 'hoc') ||
-              (item.key === 'danh-sach' && activeItem === 'danh-sach')
+              (item.key === 'tong-hop' && activeItem === 'tong-hop') ||
+              (item.key === 'danh-sach' && activeItem === 'danh-sach') ||
+              (item.key === 'trang-thai' && activeItem === 'trang-thai')
 
             return (
               <button
                 key={item.key}
                 type="button"
-                onClick={() => onSelectItem(item.key as 'trang-chu' | 'hoc' | 'danh-sach')}
+                onClick={() => onSelectItem(item.key as 'trang-chu' | 'tong-hop' | 'danh-sach' | 'trang-thai')}
                 className={`flex w-full items-center font-semibold transition ${
                   isOpen
                     ? `${

@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { HeritageItem, HeritageRank } from '@/src/types/diTich'
 
-const HERITAGES_DIR = path.join(process.cwd(), 'src/content/di-tich-da-cap-nhat')
+const HERITAGES_DIR = path.join(process.cwd(), 'src/content/di-tich')
 
 const ALLOWED_RANKS = new Set<HeritageRank>([
   'Di tích quốc gia đặc biệt',
