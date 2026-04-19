@@ -1,14 +1,32 @@
+import Image from 'next/image'
+
+function withBasePath(src: string): string {
+  if (!src.startsWith('/')) {
+    return src
+  }
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+  if (!basePath || src.startsWith(`${basePath}/`) || src === basePath) {
+    return src
+  }
+  return `${basePath}${src}`
+}
+
 export default function BrandMark() {
   return (
     <div className="flex items-center gap-3">
-      <div className="relative h-10 w-12 shrink-0">
-        <span className="absolute left-0 top-1 h-8 w-3 rotate-[18deg] rounded-full bg-gradient-to-b from-[#ffb067] via-[#ff69c7] to-[#9f7bff]" />
-        <span className="absolute left-3 top-1 h-8 w-3 -rotate-[14deg] rounded-full bg-gradient-to-b from-[#ff69c7] via-[#b574ff] to-[#7a8cff]" />
-        <span className="absolute left-7 top-1 h-8 w-3 rotate-[12deg] rounded-full bg-gradient-to-b from-[#7a8cff] via-[#8a7dff] to-[#7ad3ff]" />
+      <div className="relative h-10 w-10 shrink-0 overflow-hidden">
+        <Image
+          src={withBasePath('/images/logo/logo.svg')}
+          alt="Logo trung tâm bảo tồn"
+          fill
+          className="scale-[1.28] object-cover object-center"
+          priority
+        />
       </div>
 
-      <div className="text-[22px] font-semibold tracking-[-0.04em] text-white">
-        motionsites
+      <div className="min-w-0 text-[10px] font-semibold uppercase leading-[1.1] tracking-[0.01em] text-white">
+        <p className="whitespace-normal">TT BẢO TỒN &amp; PHÁT HUY GIÁ TRỊ</p>
+        <p className="whitespace-normal">DI TÍCH LỊCH SỬ VĂN HÓA TP HCM</p>
       </div>
     </div>
   )

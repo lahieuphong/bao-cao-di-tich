@@ -3,7 +3,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'motion/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import ThanhDauTrang from '@/src/components/layout/ThanhDauTrang'
 import SidebarNav from '@/src/components/layout/ThanhDieuHuong'
 import DanhSachSection from '@/src/components/list/DanhSachDiTichSection'
 import { CMS_UPLOAD_URL } from '@/src/constants/site'
@@ -19,23 +20,6 @@ const HERITAGE_TARGET_TOTAL = 126
 
 type ViewMode = 'grid' | 'list'
 type ScopeMode = 'all' | 'grouped'
-
-function SearchIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
-    </svg>
-  )
-}
 
 function GridIcon() {
   return (
@@ -117,29 +101,55 @@ function CloseIcon() {
   )
 }
 
+function SectionTitleIcon({
+  variant,
+}: {
+  variant: 'all' | 'special' | 'national' | 'city'
+}) {
+  if (variant === 'all') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m12 3 1.8 3.7L18 8.5l-3 2.9.7 4.1L12 13.6 8.3 15.5 9 11.4 6 8.5l4.2-1.8L12 3Z" />
+        <path d="M5 18h14" />
+      </svg>
+    )
+  }
+
+  if (variant === 'special') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="4" />
+        <path d="m9.5 11.5-1.5 8 4-2 4 2-1.5-8" />
+      </svg>
+    )
+  }
+
+  if (variant === 'national') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 21h18" />
+        <path d="M4 7h16" />
+        <path d="M6 7v14" />
+        <path d="M10 7v14" />
+        <path d="M14 7v14" />
+        <path d="M18 7v14" />
+        <path d="m2 7 10-4 10 4" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21V9l4-3 5 3 5-4 4 3v13" />
+      <path d="M8 21v-5h3v5" />
+      <path d="M14 21v-4h3v4" />
+    </svg>
+  )
+}
+
 interface HeritagesPageClientProps {
   heritages: HeritageItem[]
   danhSachItems: DanhSachItem[]
-}
-
-function SidebarToggleIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 6h16" />
-      <path d="M4 12h16" />
-      <path d="M4 18h16" />
-      {open ? <path d="m10 8-3 4 3 4" /> : <path d="m14 8 3 4-3 4" />}
-    </svg>
-  )
 }
 
 function getHeritageUrl(slug: string): string {
@@ -213,6 +223,26 @@ export default function HeritagesPageClient({
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activePage, setActivePage] = useState<'hoc' | 'danh-sach'>('hoc')
   const [showMissingModal, setShowMissingModal] = useState(false)
+  const [gridColumns, setGridColumns] = useState(4)
+  const [expandedGridSections, setExpandedGridSections] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    const updateColumns = () => {
+      if (window.innerWidth >= 1280) {
+        setGridColumns(4)
+        return
+      }
+      if (window.innerWidth >= 640) {
+        setGridColumns(2)
+        return
+      }
+      setGridColumns(1)
+    }
+
+    updateColumns()
+    window.addEventListener('resize', updateColumns)
+    return () => window.removeEventListener('resize', updateColumns)
+  }, [])
 
   const missingIds = useMemo(
     () => getMissingIds(heritages, HERITAGE_TARGET_TOTAL),
@@ -280,33 +310,12 @@ export default function HeritagesPageClient({
         />
 
         <div className={`flex min-w-0 flex-1 flex-col ${isDanhSachPage ? 'lg:overflow-hidden' : ''}`}>
-          <header className="sticky top-0 z-30 border-b border-white/10 bg-[#070b14]/95 backdrop-blur">
-            <div className="flex h-[84px] items-center justify-between px-5 md:px-8">
-              <div className="flex items-center gap-3 md:gap-4">
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen((prev) => !prev)}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 text-white transition hover:bg-white/10"
-                  aria-label={sidebarOpen ? 'Đóng sidebar' : 'Mở sidebar'}
-                  title={sidebarOpen ? 'Đóng sidebar' : 'Mở sidebar'}
-                >
-                  <SidebarToggleIcon open={sidebarOpen} />
-                </button>
-                <h1 className="text-[56px] font-semibold tracking-[-0.03em]" style={{ fontSize: 56 / 2 }}>
-                  {activePage === 'hoc' ? 'Học' : 'Danh sách'}
-                </h1>
-              </div>
-
-              <div className="flex items-center gap-5 text-white/90">
-                <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-white/10">
-                  <SearchIcon />
-                </button>
-                <Link href={CMS_UPLOAD_URL} target="_blank" className="text-sm font-semibold hover:text-white">
-                  Đăng Nhập
-                </Link>
-              </div>
-            </div>
-          </header>
+          <ThanhDauTrang
+            sidebarOpen={sidebarOpen}
+            activePage={activePage}
+            onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+            loginUrl={CMS_UPLOAD_URL}
+          />
 
           <section className={isDanhSachPage ? 'pb-7 lg:flex-1 lg:min-h-0 lg:overflow-hidden lg:pb-0' : 'pb-7'}>
             {activePage === 'hoc' ? (
@@ -361,7 +370,7 @@ export default function HeritagesPageClient({
             ) : null}
 
             {activePage === 'hoc' ? (
-              <section className="mt-9 space-y-10 px-5 md:px-8">
+              <section className="mt-0 space-y-10 px-5 md:px-8">
               <div className="-mx-5 flex flex-wrap items-center justify-between gap-4 rounded-none border-y border-[#6f8fff]/35 bg-[#2563eb]/16 px-5 py-2 shadow-[0_0_0_1px_rgba(83,124,255,0.16),0_0_20px_rgba(37,99,235,0.22)] md:-mx-8 md:px-8">
                 <div className="inline-flex h-10 items-center rounded-lg border border-[#6f8fff]/35 bg-[#0f1729] p-0.5 shadow-[0_0_0_1px_rgba(83,124,255,0.14),0_0_18px_rgba(59,130,246,0.25),0_10px_30px_rgba(10,24,58,0.35)]">
                   <button
@@ -418,14 +427,14 @@ export default function HeritagesPageClient({
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-xl border border-white/10 bg-[#0e1422] px-4 py-2.5">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/55">Tổng đã push</p>
+                  <p className="text-[13px] font-semibold tracking-normal text-white/55">Tổng đã push</p>
                   <p className="mt-1.5 text-[36px] font-semibold leading-none text-white" style={{ fontSize: 36 / 2 }}>
                     {publishCount}
                   </p>
                 </div>
                 {groupedSections.map((section) => (
                   <div key={`stat-${section.title}`} className="rounded-xl border border-white/10 bg-[#0e1422] px-4 py-2.5">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/55">{section.title}</p>
+                    <p className="text-[13px] font-semibold tracking-normal text-white/55">{section.title}</p>
                     <p className="mt-1.5 text-[36px] font-semibold leading-none text-white" style={{ fontSize: 36 / 2 }}>
                       {section.items.length}
                     </p>
@@ -438,12 +447,27 @@ export default function HeritagesPageClient({
                 : groupedSections
               ).map((sectionTitle, sectionIdx) => (
                 <div key={sectionTitle.title}>
-                  <h2 className="text-[64px] font-semibold tracking-[-0.03em]" style={{ fontSize: 64 / 2 }}>
-                    {sectionTitle.title}
-                    {sectionTitle.rank === null ? ` (${sectionTitle.items.length}/${HERITAGE_TARGET_TOTAL})` : ''}
+                  <h2 className="flex items-center gap-2.5 text-[64px] font-semibold tracking-[-0.03em]" style={{ fontSize: 64 / 2 }}>
+                    <span className="shrink-0 text-white/78">
+                      <SectionTitleIcon
+                        variant={
+                          sectionTitle.rank === null
+                            ? 'all'
+                            : sectionTitle.rank === 'Di tích quốc gia đặc biệt'
+                              ? 'special'
+                              : sectionTitle.rank === 'Di tích quốc gia'
+                                ? 'national'
+                                : 'city'
+                        }
+                      />
+                    </span>
+                    <span>
+                      {sectionTitle.title}
+                      {sectionTitle.rank === null ? ` (${sectionTitle.items.length}/${HERITAGE_TARGET_TOTAL})` : ''}
+                    </span>
                   </h2>
                   {sectionTitle.rank === null ? (
-                    <div className="sticky top-[84px] z-20 -mx-5 mt-0 flex items-center justify-between gap-3 border-y border-red-400/30 bg-red-500/25 px-5 py-2.5 text-sm text-red-50 backdrop-blur md:-mx-8 md:px-8">
+                    <div className="sticky top-[54px] z-20 -mx-5 mt-5 flex h-[54px] items-center justify-between gap-3 border-y border-red-400/30 bg-red-500/25 px-5 text-sm text-red-50 backdrop-blur md:-mx-8 md:px-8">
                       <p className="truncate font-semibold">{missingRangesText}</p>
                       <button
                         type="button"
@@ -458,47 +482,80 @@ export default function HeritagesPageClient({
                   ) : null}
 
                   {viewMode === 'grid' ? (
-                    <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                      {sectionTitle.items.map((item, idx) => (
-                        <motion.article
-                          key={`${sectionTitle.title}-${item.id}`}
-                          initial={{ opacity: 0, y: 16 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true, amount: 0.2 }}
-                          transition={{ duration: 0.45, delay: idx * 0.05 + sectionIdx * 0.03 }}
-                          className="overflow-hidden rounded-xl border border-white/10 bg-[#0e1422]"
-                        >
-                          <div className="relative h-[190px]">
-                            <Image
-                              src={withBasePath(item.cover)}
-                              alt={item.name}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 1280px) 50vw, 25vw"
-                            />
-                          </div>
-                          <div className="p-4">
-                            <p className="text-xs uppercase tracking-[0.16em] text-white/60">{item.rank}</p>
-                            <h3 className="mt-2 text-xl font-semibold leading-snug">
-                              {item.id} {item.name}
-                            </h3>
-                            <p className="mt-2 text-sm text-white/70">
-                              Cập nhật gần nhất: {item.updatedAt}
-                            </p>
-                          </div>
-                        </motion.article>
-                      ))}
+                    (() => {
+                      const collapsedCount = gridColumns * 2
+                      const sectionKey = `${scopeMode}-${sectionTitle.rank ?? 'all'}-${sectionTitle.title}`
+                      const isExpanded = expandedGridSections[sectionKey] ?? false
+                      const hasMore = sectionTitle.items.length > collapsedCount
+                      const itemsToRender = isExpanded
+                        ? sectionTitle.items
+                        : sectionTitle.items.slice(0, collapsedCount)
 
-                      {sectionTitle.items.length === 0 ? (
-                        <div className="col-span-full rounded-xl border border-dashed border-white/20 bg-white/5 px-4 py-8 text-center text-white/60">
-                          Chưa có dữ liệu cho nhóm này.
+                      return (
+                        <div className="relative mt-5">
+                          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                            {itemsToRender.map((item, idx) => (
+                              <motion.article
+                                key={`${sectionTitle.title}-${item.id}`}
+                                initial={{ opacity: 0, y: 16 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, amount: 0.2 }}
+                                transition={{ duration: 0.45, delay: idx * 0.05 + sectionIdx * 0.03 }}
+                                className="overflow-hidden rounded-xl border border-white/10 bg-[#0e1422]"
+                              >
+                                <div className="relative h-[190px]">
+                                  <Image
+                                    src={withBasePath(item.cover)}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 1280px) 50vw, 25vw"
+                                  />
+                                </div>
+                                <div className="p-4">
+                                  <p className="text-xs uppercase tracking-[0.16em] text-white/60">{item.rank}</p>
+                                  <h3 className="mt-2 text-xl font-semibold leading-snug">
+                                    {item.id}. {item.name}
+                                  </h3>
+                                  <p className="mt-2 text-sm text-white/70">
+                                    Cập nhật gần nhất: {item.updatedAt}
+                                  </p>
+                                </div>
+                              </motion.article>
+                            ))}
+
+                            {sectionTitle.items.length === 0 ? (
+                              <div className="col-span-full rounded-xl border border-dashed border-white/20 bg-white/5 px-4 py-8 text-center text-white/60">
+                                Chưa có dữ liệu cho nhóm này.
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {hasMore && !isExpanded ? (
+                            <>
+                              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#060b16] via-[#060b16]/85 to-transparent" />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedGridSections((prev) => ({
+                                    ...prev,
+                                    [sectionKey]: true,
+                                  }))
+                                }
+                                className="relative z-10 mt-2 block w-full py-2 text-center text-[20px] font-semibold text-white/95 transition hover:text-white"
+                                style={{ textShadow: '0 0 10px rgba(165,180,252,0.55), 0 0 22px rgba(59,130,246,0.35)' }}
+                              >
+                                Xem thêm...
+                              </button>
+                            </>
+                          ) : null}
                         </div>
-                      ) : null}
-                    </div>
+                      )
+                    })()
                   ) : (
                     <div className="mt-5 overflow-hidden rounded-xl border border-white/10 bg-[#0e1422]">
                       <div
-                        className={`grid gap-4 border-b border-white/10 px-5 py-3 text-xs uppercase tracking-[0.14em] text-white/50 ${
+                        className={`grid gap-4 border-b border-white/10 px-5 py-3 text-xs font-semibold tracking-normal text-white/55 ${
                           scopeMode === 'all'
                             ? 'grid-cols-[0.7fr_1.7fr_1.3fr_1.3fr_1.2fr_2.2fr_auto]'
                             : 'grid-cols-[0.7fr_2fr_1.3fr_1.2fr_2.6fr_auto]'
