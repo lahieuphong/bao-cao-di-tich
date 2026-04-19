@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   },
   basePath: repoBasePath,
   assetPrefix: repoBasePath,
+  env: {
+    NEXT_PUBLIC_BASE_PATH: repoBasePath,
+  },
 }
 
 export default nextConfig

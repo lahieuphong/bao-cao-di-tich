@@ -146,6 +146,19 @@ function getHeritageUrl(slug: string): string {
   return `/di-tich/${slug}`
 }
 
+function withBasePath(src: string): string {
+  if (!src.startsWith('/')) {
+    return src
+  }
+
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+  if (!basePath || src.startsWith(`${basePath}/`) || src === basePath) {
+    return src
+  }
+
+  return `${basePath}${src}`
+}
+
 function getMissingIds(items: HeritageItem[], total: number): number[] {
   const seen = new Set<number>()
   for (const item of items) {
@@ -305,7 +318,7 @@ export default function HeritagesPageClient({
               >
                 <div className="relative min-h-[200px] md:min-h-[260px] lg:min-h-[305px]">
                   <Image
-                    src={heroImage}
+                    src={withBasePath(heroImage)}
                     alt="Tạo trên motionsites"
                     fill
                     priority
@@ -457,7 +470,7 @@ export default function HeritagesPageClient({
                         >
                           <div className="relative h-[190px]">
                             <Image
-                              src={item.cover}
+                              src={withBasePath(item.cover)}
                               alt={item.name}
                               fill
                               className="object-cover"
