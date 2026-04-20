@@ -6,3 +6,4 @@ rank: Di tích thành phố
 cover: /images/di-tich/03-nha-co-dan-dung-tphcm.jpg
 updatedAt: 24-12-2025
 note: Đã push đầy đủ lên website.
+status: 1

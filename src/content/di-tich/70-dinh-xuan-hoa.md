@@ -6,3 +6,4 @@ rank: Di tích thành phố
 cover: /images/di-tich/70-dinh-xuan-hoa.jpg
 updatedAt: 24-12-2025
 note: Đã push đầy đủ lên website.
+status: 1

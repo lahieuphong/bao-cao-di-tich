@@ -7,7 +7,7 @@ import type { DangNhapItem } from '@/src/data/dangNhap'
 
 interface ThanhDauTrangProps {
   sidebarOpen: boolean
-  activePage: 'tong-hop' | 'danh-sach' | 'trang-thai'
+  activePage: 'tong-hop' | 'danh-sach'
   onToggleSidebar: () => void
   dangNhapItems: DangNhapItem[]
   isLoggedIn: boolean
@@ -146,7 +146,7 @@ export default function ThanhDauTrang({
               <SidebarToggleIcon open={sidebarOpen} />
             </button>
             <h1 className="text-[48px] font-semibold tracking-[-0.03em]" style={{ fontSize: 48 / 2 }}>
-              {activePage === 'tong-hop' ? 'Tổng hợp' : activePage === 'danh-sach' ? 'Danh sách' : 'Trạng thái'}
+              {activePage === 'tong-hop' ? 'Tổng hợp' : 'Danh sách'}
             </h1>
           </div>
 

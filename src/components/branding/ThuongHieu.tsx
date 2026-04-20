@@ -13,7 +13,7 @@ function withBasePath(src: string): string {
 
 export default function ThuongHieu() {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <div className="relative h-10 w-10 shrink-0 overflow-hidden">
         <Image
           src={withBasePath('/images/logo/logo.svg')}
@@ -24,9 +24,9 @@ export default function ThuongHieu() {
         />
       </div>
 
-      <div className="min-w-0 text-[10px] font-semibold uppercase leading-[1.1] tracking-[0.01em] text-white">
-        <p className="whitespace-normal">TT BẢO TỒN &amp; PHÁT HUY GIÁ TRỊ</p>
-        <p className="whitespace-normal">DI TÍCH LỊCH SỬ VĂN HÓA TP HCM</p>
+      <div className="min-w-0 text-[9px] font-semibold uppercase leading-[1.15] tracking-[0.005em] text-white">
+        <p className="whitespace-nowrap">TT BẢO TỒN &amp; PHÁT HUY GIÁ TRỊ</p>
+        <p className="whitespace-nowrap">DI TÍCH LỊCH SỬ VĂN HÓA TP HCM</p>
       </div>
     </div>
   )

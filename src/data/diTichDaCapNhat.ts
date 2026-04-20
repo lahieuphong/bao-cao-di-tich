@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import type { HeritageItem, HeritageRank } from '@/src/types/diTich'
+import type { HeritageItem, HeritageRank, HeritageStatus } from '@/src/types/diTich'
 
 const HERITAGES_DIR = path.join(process.cwd(), 'src/content/di-tich')
 
@@ -51,6 +51,8 @@ function toHeritageItem(fileName: string, data: Record<string, string>): Heritag
     throw new Error(`Rank không hợp lệ trong file ${fileName}: ${data.rank}`)
   }
 
+  const status: HeritageStatus = data.status === '0' ? 0 : 1
+
   return {
     id: data.id,
     name: data.name,
@@ -60,6 +62,7 @@ function toHeritageItem(fileName: string, data: Record<string, string>): Heritag
     cover: data.cover,
     updatedAt: data.updatedAt,
     note: data.note,
+    status,
   }
 }
 

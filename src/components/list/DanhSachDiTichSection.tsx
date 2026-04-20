@@ -114,28 +114,28 @@ export default function DanhSachSection({ items }: DanhSachSectionProps) {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0e1422] lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
-        <div className="shrink-0 grid h-12 grid-cols-[160px_minmax(0,1fr)] items-center gap-4 border-b border-white/10 bg-[#DEE7FF] px-5 text-[#3563FF]">
-          <p className="text-center text-[30px] font-semibold tracking-[0.02em]" style={{ fontSize: 30 / 2 }}>
+        <div className="shrink-0 grid grid-cols-[160px_minmax(0,1fr)] items-center gap-4 px-5 py-3 text-sm font-bold tracking-normal text-white/70">
+          <p className="text-center">
             STT
           </p>
-          <p className="text-[30px] font-semibold tracking-[0.02em]" style={{ fontSize: 30 / 2 }}>
-            DI TÍCH
+          <p className="text-center">
+            Di tích
           </p>
         </div>
-        <div className="shrink-0 grid grid-cols-[160px_minmax(0,1fr)] gap-4 border-b border-white/10 bg-[#111a2f] px-5 py-2">
+        <div className="shrink-0 grid grid-cols-[160px_minmax(0,1fr)] gap-4 border-b border-white/10 px-5 py-2.5">
           <input
             type="text"
             value={sttQuery}
             onChange={(event) => setSttQuery(event.target.value)}
             placeholder="Tìm STT..."
-            className="h-9 rounded-lg border border-white/15 bg-[#0b1225] px-3 text-center text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[#3563FF]"
+            className="h-8 rounded-md border border-white/15 bg-[#0a1326] px-2 text-center text-xs text-white outline-none transition placeholder:text-white/35 focus:border-[#6f8fff]/70"
           />
           <input
             type="text"
             value={nameQuery}
             onChange={(event) => setNameQuery(event.target.value)}
             placeholder="Tìm di tích..."
-            className="h-9 rounded-lg border border-white/15 bg-[#0b1225] px-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[#3563FF]"
+            className="h-8 rounded-md border border-white/15 bg-[#0a1326] px-2 text-xs text-white outline-none transition placeholder:text-white/35 focus:border-[#6f8fff]/70"
           />
         </div>
 

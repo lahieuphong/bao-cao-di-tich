@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ThanhDauTrang from '@/src/components/layout/ThanhDauTrang'
 import SidebarNav from '@/src/components/layout/ThanhDieuHuong'
 import DanhSachSection from '@/src/components/list/DanhSachDiTichSection'
-import TrangThaiDiTichSection from '@/src/components/list/TrangThaiDiTichSection'
+import { UI_BOOT_FLAGS } from '@/src/constants/uiBootFlags'
 import type { HeritageItem, HeritageRank } from '@/src/types/diTich'
 import type { DanhSachItem } from '@/src/data/danhSachDiTich'
 import type { DangNhapItem } from '@/src/data/dangNhap'
@@ -21,6 +21,15 @@ const HERITAGE_TARGET_TOTAL = 126
 
 type ViewMode = 'grid' | 'list'
 type ScopeMode = 'all' | 'grouped'
+type ColumnFilters = {
+  id: string
+  name: string
+  address: string
+  rank: string
+  updatedAt: string
+  note: string
+  status: string
+}
 
 function GridIcon() {
   return (
@@ -215,21 +224,103 @@ function buildMissingIdRanges(missingIds: number[], total: number): string {
   return `Chưa có dữ liệu (STT): ${ranges.join(', ')}`
 }
 
+function normalizeForSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đ]/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0
+  if (a.length === 0) return b.length
+  if (b.length === 0) return a.length
+
+  const dp = Array.from({ length: a.length + 1 }, () =>
+    Array.from({ length: b.length + 1 }, () => 0),
+  )
+  for (let i = 0; i <= a.length; i += 1) dp[i][0] = i
+  for (let j = 0; j <= b.length; j += 1) dp[0][j] = j
+
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost,
+      )
+    }
+  }
+
+  return dp[a.length][b.length]
+}
+
+function fuzzyMatchCell(rawValue: string, rawQuery: string): boolean {
+  const query = normalizeForSearch(rawQuery)
+  if (!query) return true
+
+  const value = normalizeForSearch(rawValue)
+  if (!value) return false
+  if (value.includes(query)) return true
+
+  const tokens = value.split(' ')
+  const maxDistance = query.length >= 8 ? 2 : query.length >= 4 ? 1 : 0
+  if (maxDistance === 0) return false
+
+  return tokens.some((token) => {
+    if (!token) return false
+    if (Math.abs(token.length - query.length) > maxDistance) return false
+    return levenshteinDistance(token, query) <= maxDistance
+  })
+}
+
+
 export default function HeritagesPageClient({
   heritages,
   danhSachItems,
   dangNhapItems,
 }: HeritagesPageClientProps) {
   const heroImage = '/images/anh-bia/di-tich-anh-bia.jpg'
-  const latest = heritages[0]
-  const publishCount = heritages.length
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [scopeMode, setScopeMode] = useState<ScopeMode>('all')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [activePage, setActivePage] = useState<'tong-hop' | 'danh-sach' | 'trang-thai'>('tong-hop')
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; avatar: string } | null>(null)
-  const [statusByHeritageId, setStatusByHeritageId] = useState<Record<string, boolean>>({})
+  const bootUser = dangNhapItems[0]
+    ? {
+        id: dangNhapItems[0].id,
+        username: dangNhapItems[0].username,
+        avatar: dangNhapItems[0].avatar,
+      }
+    : {
+        id: '0',
+        username: 'admin',
+        avatar: '/images/hinh-dai-dien/01-mac-dinh.jpg',
+      }
+
+  const [scopeMode, setScopeMode] = useState<ScopeMode>(
+    UI_BOOT_FLAGS.scopeAll ? 'all' : 'grouped',
+  )
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    UI_BOOT_FLAGS.viewList ? 'list' : 'grid',
+  )
+  const [sidebarOpen, setSidebarOpen] = useState(!UI_BOOT_FLAGS.sidebarClosed)
+  const [activePage, setActivePage] = useState<'tong-hop' | 'danh-sach'>(
+    UI_BOOT_FLAGS.pageTongHop ? 'tong-hop' : 'danh-sach',
+  )
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(UI_BOOT_FLAGS.loggedIn)
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; avatar: string } | null>(
+    UI_BOOT_FLAGS.loggedIn ? bootUser : null,
+  )
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({
+    id: '',
+    name: '',
+    address: '',
+    rank: '',
+    updatedAt: '',
+    note: '',
+    status: '',
+  })
   const [showMissingModal, setShowMissingModal] = useState(false)
   const [gridColumns, setGridColumns] = useState(4)
   const [expandedGridSections, setExpandedGridSections] = useState<Record<string, boolean>>({})
@@ -252,9 +343,16 @@ export default function HeritagesPageClient({
     return () => window.removeEventListener('resize', updateColumns)
   }, [])
 
-  const missingIds = useMemo(
-    () => getMissingIds(heritages, HERITAGE_TARGET_TOTAL),
+  const visibleHeritages = useMemo(
+    () => heritages.filter((item) => item.status === 1),
     [heritages],
+  )
+  const latest = visibleHeritages[0]
+  const publishCount = visibleHeritages.length
+
+  const missingIds = useMemo(
+    () => getMissingIds(visibleHeritages, HERITAGE_TARGET_TOTAL),
+    [visibleHeritages],
   )
   const missingRangesText = useMemo(
     () => buildMissingIdRanges(missingIds, HERITAGE_TARGET_TOTAL),
@@ -281,29 +379,17 @@ export default function HeritagesPageClient({
 
   const groupedSections = heritageSections.map((section) => ({
     ...section,
-    items: heritages.filter((item) => item.rank === section.rank),
+    items: visibleHeritages.filter((item) => item.rank === section.rank),
   }))
 
   const handleLoginSuccess = (user: { id: string; username: string; avatar: string }) => {
     setIsLoggedIn(true)
     setCurrentUser(user)
-    setStatusByHeritageId({})
   }
 
   const handleLogout = () => {
     setIsLoggedIn(false)
     setCurrentUser(null)
-  }
-
-  const handleToggleStatus = (id: string) => {
-    setStatusByHeritageId((prev) => ({
-      ...prev,
-      [id]: !(prev[id] ?? true),
-    }))
-  }
-
-  const isVisibleInOverview = (id: string) => {
-    return statusByHeritageId[id] !== false
   }
 
   const handleScopeModeChange = (mode: ScopeMode) => {
@@ -313,6 +399,13 @@ export default function HeritagesPageClient({
     requestAnimationFrame(() => {
       window.scrollTo({ top: currentY, behavior: 'auto' })
     })
+  }
+
+  const handleFilterChange = (key: keyof ColumnFilters, value: string) => {
+    setColumnFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }))
   }
 
   const isDanhSachPage = activePage === 'danh-sach'
@@ -330,10 +423,6 @@ export default function HeritagesPageClient({
           onSelectItem={(key) => {
             if (key === 'danh-sach') {
               setActivePage('danh-sach')
-              return
-            }
-            if (key === 'trang-thai') {
-              setActivePage('trang-thai')
               return
             }
 
@@ -473,7 +562,7 @@ export default function HeritagesPageClient({
               </div>
 
               {(scopeMode === 'all'
-                ? [{ title: 'Tất cả di tích đã push', rank: null, items: heritages }]
+                ? [{ title: 'Tất cả di tích đã push', rank: null, items: visibleHeritages }]
                 : groupedSections
               ).map((sectionTitle, sectionIdx) => (
                 <div key={sectionTitle.title}>
@@ -584,55 +673,142 @@ export default function HeritagesPageClient({
                     })()
                   ) : (
                     <div className="mt-5 overflow-hidden rounded-xl border border-white/10 bg-[#0e1422]">
+                      {(() => {
+                        const filteredItems = sectionTitle.items.filter((item) => (
+                          fuzzyMatchCell(item.id, columnFilters.id) &&
+                          fuzzyMatchCell(item.name, columnFilters.name) &&
+                          fuzzyMatchCell(item.address, columnFilters.address) &&
+                          (scopeMode === 'all' ? fuzzyMatchCell(item.rank, columnFilters.rank) : true) &&
+                          fuzzyMatchCell(item.updatedAt, columnFilters.updatedAt) &&
+                          fuzzyMatchCell(item.note, columnFilters.note) &&
+                          fuzzyMatchCell(String(item.status), columnFilters.status)
+                        ))
+
+                        return (
+                          <>
                       <div
-                        className={`grid gap-4 border-b border-white/10 px-5 py-3 text-sm font-bold tracking-normal text-white/70 ${
+                        className={`grid gap-4 px-5 py-3 text-sm font-bold tracking-normal text-white/70 ${
                           scopeMode === 'all'
-                            ? 'grid-cols-[0.7fr_1.7fr_1.3fr_1.3fr_1.2fr_2.2fr_auto]'
-                            : 'grid-cols-[0.7fr_2fr_1.3fr_1.2fr_2.6fr_auto]'
+                            ? 'grid-cols-[0.7fr_0.9fr_1.5fr_1.2fr_1.2fr_1fr_2fr_1fr]'
+                            : 'grid-cols-[0.7fr_0.9fr_1.9fr_1.2fr_1fr_2.4fr_1fr]'
                         }`}
                       >
-                        <p>STT</p>
-                        <p>Tên di tích</p>
-                        <p>Địa chỉ</p>
-                        {scopeMode === 'all' ? <p>Cấp</p> : null}
-                        <p>Cập nhật</p>
-                        <p>Ghi chú</p>
-                        <p className="text-right">Link</p>
+                        <p className="justify-self-center text-center">STT</p>
+                        <p className="justify-self-center text-center">Ảnh</p>
+                        <p className="justify-self-center text-center">Tên di tích</p>
+                        <p className="justify-self-center text-center">Địa chỉ</p>
+                        {scopeMode === 'all' ? <p className="justify-self-center text-center">Cấp</p> : null}
+                        <p className="justify-self-center text-center">Cập nhật</p>
+                        <p className="justify-self-center text-center">Ghi chú</p>
+                        <p className="justify-self-center text-center">Trạng thái</p>
                       </div>
 
-                      {sectionTitle.items
-                        .filter((item) => isVisibleInOverview(String(item.id)))
-                        .map((item) => (
+                      <div
+                        className={`grid gap-4 border-b border-white/10 px-5 py-2.5 ${
+                          scopeMode === 'all'
+                            ? 'grid-cols-[0.7fr_0.9fr_1.5fr_1.2fr_1.2fr_1fr_2fr_1fr]'
+                            : 'grid-cols-[0.7fr_0.9fr_1.9fr_1.2fr_1fr_2.4fr_1fr]'
+                        }`}
+                      >
+                        <input
+                          value={columnFilters.id}
+                          onChange={(event) => handleFilterChange('id', event.target.value)}
+                          placeholder="Tìm STT..."
+                          className="h-8 w-full rounded-md border border-white/15 bg-[#0a1326] px-2 text-xs text-white outline-none transition focus:border-[#6f8fff]/70"
+                        />
+                        <div className="h-8" />
+                        <input
+                          value={columnFilters.name}
+                          onChange={(event) => handleFilterChange('name', event.target.value)}
+                          placeholder="Tìm tên..."
+                          className="h-8 w-full rounded-md border border-white/15 bg-[#0a1326] px-2 text-xs text-white outline-none transition focus:border-[#6f8fff]/70"
+                        />
+                        <input
+                          value={columnFilters.address}
+                          onChange={(event) => handleFilterChange('address', event.target.value)}
+                          placeholder="Tìm địa chỉ..."
+                          className="h-8 w-full rounded-md border border-white/15 bg-[#0a1326] px-2 text-xs text-white outline-none transition focus:border-[#6f8fff]/70"
+                        />
+                        {scopeMode === 'all' ? (
+                          <input
+                            value={columnFilters.rank}
+                            onChange={(event) => handleFilterChange('rank', event.target.value)}
+                            placeholder="Tìm cấp..."
+                            className="h-8 w-full rounded-md border border-white/15 bg-[#0a1326] px-2 text-xs text-white outline-none transition focus:border-[#6f8fff]/70"
+                          />
+                        ) : null}
+                        <input
+                          value={columnFilters.updatedAt}
+                          onChange={(event) => handleFilterChange('updatedAt', event.target.value)}
+                          placeholder="Tìm cập nhật..."
+                          className="h-8 w-full rounded-md border border-white/15 bg-[#0a1326] px-2 text-xs text-white outline-none transition focus:border-[#6f8fff]/70"
+                        />
+                        <input
+                          value={columnFilters.note}
+                          onChange={(event) => handleFilterChange('note', event.target.value)}
+                          placeholder="Tìm ghi chú..."
+                          className="h-8 w-full rounded-md border border-white/15 bg-[#0a1326] px-2 text-xs text-white outline-none transition focus:border-[#6f8fff]/70"
+                        />
+                        <input
+                          value={columnFilters.status}
+                          onChange={(event) => handleFilterChange('status', event.target.value)}
+                          placeholder="0 hoặc 1..."
+                          className="h-8 w-full rounded-md border border-white/15 bg-[#0a1326] px-2 text-xs text-white outline-none transition focus:border-[#6f8fff]/70"
+                        />
+                      </div>
+
+                      {filteredItems.map((item) => (
                           <div
                             key={`${sectionTitle.title}-list-${item.id}`}
-                            className={`grid gap-4 border-b border-white/10 px-5 py-4 text-sm text-white/85 last:border-b-0 ${
+                            className={`smooth-interaction grid items-center gap-4 border-b border-white/10 px-5 py-4 text-sm text-white/85 hover:-translate-y-[1px] hover:bg-[#16213d] hover:text-white last:border-b-0 ${
                               scopeMode === 'all'
-                                ? 'grid-cols-[0.7fr_1.7fr_1.3fr_1.3fr_1.2fr_2.2fr_auto]'
-                                : 'grid-cols-[0.7fr_2fr_1.3fr_1.2fr_2.6fr_auto]'
+                                ? 'grid-cols-[0.7fr_0.9fr_1.5fr_1.2fr_1.2fr_1fr_2fr_1fr]'
+                                : 'grid-cols-[0.7fr_0.9fr_1.9fr_1.2fr_1fr_2.4fr_1fr]'
                             }`}
                           >
-                            <p className="font-semibold text-white">{item.id}</p>
+                            <p className="justify-self-center text-center font-semibold text-white">{item.id}</p>
+                            <div className="relative h-10 w-10 justify-self-center overflow-hidden rounded-md border border-white/15 bg-white/5">
+                              <Image
+                                src={withBasePath(item.cover)}
+                                alt={item.name}
+                                fill
+                                className="object-cover"
+                                sizes="40px"
+                              />
+                            </div>
                             <p className="font-semibold text-white">{item.name}</p>
-                            <p>{item.address}</p>
-                            {scopeMode === 'all' ? <p>{item.rank}</p> : null}
-                            <p>{item.updatedAt}</p>
-                            <p className="text-white/65">{item.note}</p>
-                            <div className="text-right">
-                              <Link
-                                href={getHeritageUrl(item.slug)}
-                                className="inline-flex rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10"
+                            <p className="justify-self-center text-center">{item.address}</p>
+                            {scopeMode === 'all' ? <p className="justify-self-center text-center">{item.rank}</p> : null}
+                            <p className="justify-self-center text-center">{item.updatedAt}</p>
+                            <p className="justify-self-center text-center text-white/65">{item.note}</p>
+                            <div className="flex items-center justify-self-center">
+                              <span
+                                className={`relative inline-flex h-6 w-10 cursor-not-allowed items-center rounded-full border ${
+                                  item.status === 1
+                                    ? 'border-emerald-300/40 bg-emerald-500/35'
+                                    : 'border-white/25 bg-white/10'
+                                }`}
+                                aria-label={`Trạng thái: ${item.status}`}
+                                title={`Trạng thái: ${item.status}`}
                               >
-                                Xem
-                              </Link>
+                                <span
+                                  className={`h-4 w-4 rounded-full bg-white transition-transform ${
+                                    item.status === 1 ? 'translate-x-5' : 'translate-x-1'
+                                  }`}
+                                />
+                              </span>
                             </div>
                           </div>
                         ))}
 
-                      {sectionTitle.items.filter((item) => isVisibleInOverview(String(item.id))).length === 0 ? (
+                      {filteredItems.length === 0 ? (
                         <div className="px-5 py-8 text-center text-white/60">
                           Chưa có dữ liệu cho nhóm này.
                         </div>
                       ) : null}
+                          </>
+                        )
+                      })()}
                     </div>
                   )}
                 </div>
@@ -640,15 +816,7 @@ export default function HeritagesPageClient({
 
               </section>
             ) : (
-              activePage === 'danh-sach' ? (
-                <DanhSachSection items={danhSachItems} />
-              ) : (
-                <TrangThaiDiTichSection
-                  items={heritages}
-                  statusByHeritageId={statusByHeritageId}
-                  onToggleStatus={handleToggleStatus}
-                />
-              )
+              <DanhSachSection items={danhSachItems} />
             )}
           </section>
         </div>

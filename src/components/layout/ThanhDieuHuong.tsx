@@ -74,26 +74,6 @@ function ListIcon() {
   )
 }
 
-function StatusIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="6" width="18" height="4" rx="2" />
-      <rect x="3" y="14" width="18" height="4" rx="2" />
-      <circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none" />
-      <circle cx="16" cy="16" r="1.2" fill="currentColor" stroke="none" />
-    </svg>
-  )
-}
-
 function ThuongHieuRutGon() {
   return (
     <div className="relative h-10 w-10 shrink-0 overflow-hidden">
@@ -112,13 +92,12 @@ const sidebarItems = [
   { key: 'trang-chu', label: 'Trang Chủ', icon: HomeIcon },
   { key: 'tong-hop', label: 'Tổng hợp', icon: OverviewIcon },
   { key: 'danh-sach', label: 'Danh sách', icon: ListIcon },
-  { key: 'trang-thai', label: 'Trạng thái', icon: StatusIcon },
 ]
 
 interface SidebarNavProps {
   isOpen: boolean
-  activeItem: 'tong-hop' | 'danh-sach' | 'trang-thai'
-  onSelectItem: (key: 'trang-chu' | 'tong-hop' | 'danh-sach' | 'trang-thai') => void
+  activeItem: 'tong-hop' | 'danh-sach'
+  onSelectItem: (key: 'trang-chu' | 'tong-hop' | 'danh-sach') => void
 }
 
 export default function SidebarNav({
@@ -129,32 +108,31 @@ export default function SidebarNav({
   return (
     <aside
       className={`sticky top-0 hidden h-screen shrink-0 border-r border-white/10 bg-[#070b14] text-white transition-all duration-300 lg:flex lg:flex-col ${
-        isOpen ? 'w-[290px]' : 'w-[54px]'
+        isOpen ? 'lg:w-[252px] xl:w-[268px]' : 'lg:w-[50px] xl:w-[54px]'
       }`}
     >
       <div
         className={`flex h-[54px] items-center border-b border-white/10 ${
-          isOpen ? 'px-5 justify-start' : 'px-2 justify-center'
+          isOpen ? 'px-4 justify-start xl:px-5' : 'px-2 justify-center'
         }`}
       >
         {isOpen ? <ThuongHieu /> : <ThuongHieuRutGon />}
       </div>
 
-      <div className={`flex min-h-0 flex-1 flex-col ${isOpen ? 'px-5 py-4' : 'px-2 py-4'}`}>
+      <div className={`flex min-h-0 flex-1 flex-col ${isOpen ? 'px-4 py-4 xl:px-5' : 'px-2 py-4'}`}>
         <div className="min-h-0 flex-1 overflow-y-auto">
         <nav className="space-y-2">
           {sidebarItems.map((item) => {
             const Icon = item.icon
             const isActive =
               (item.key === 'tong-hop' && activeItem === 'tong-hop') ||
-              (item.key === 'danh-sach' && activeItem === 'danh-sach') ||
-              (item.key === 'trang-thai' && activeItem === 'trang-thai')
+              (item.key === 'danh-sach' && activeItem === 'danh-sach')
 
             return (
               <button
                 key={item.key}
                 type="button"
-                onClick={() => onSelectItem(item.key as 'trang-chu' | 'tong-hop' | 'danh-sach' | 'trang-thai')}
+                onClick={() => onSelectItem(item.key as 'trang-chu' | 'tong-hop' | 'danh-sach')}
                 className={`flex w-full items-center font-semibold transition ${
                   isOpen
                     ? `${
@@ -182,7 +160,7 @@ export default function SidebarNav({
         </div>
       </div>
 
-      <div className={`border-t border-white/10 ${isOpen ? 'px-5 py-2' : 'px-2 py-2'}`}>
+      <div className={`border-t border-white/10 ${isOpen ? 'px-4 py-2 xl:px-5' : 'px-2 py-2'}`}>
         <Link
           href="https://github.com/lahieuphong"
           target="_blank"
